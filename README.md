@@ -1,12 +1,14 @@
 # DriveGuard AI — prototipo demostrativo en Python
 
-**Importante:** este programa **no usa cámara ni inteligencia artificial**. Genera y evalúa **datos simulados** para demostrar la lógica del sistema. Es exclusivamente académico. No instalar ni usar como dispositivo de seguridad en un vehículo.
+**Importante:** el programa conserva un modo de **datos simulados** y agrega un modo opcional de cámara local mediante OpenCV. La cámara calcula señales básicas de rostro/ojos; no es un modelo de IA entrenado ni un sistema validado para conducción real. Es exclusivamente académico. No instalar ni usar como dispositivo de seguridad en un vehículo.
 
 ## Requisitos
 
 - Python 3.11 o posterior, con `tkinter` disponible (habitualmente incluido en instalaciones estándar de Python para Windows).
 - `matplotlib` para las gráficas de eventos: `pip install matplotlib`
-- Pantalla de computadora; no requiere webcam ni Internet.
+- `opencv-contrib-python` para la cámara y respaldo Haar: `pip install opencv-contrib-python`
+- `mediapipe` para landmarks faciales, ojos, boca e inclinación: `pip install mediapipe`
+- Pantalla de computadora; la cámara e Internet no son obligatorios para el modo simulado.
 
 ## Ejecutar
 
@@ -24,19 +26,17 @@ En algunos equipos Windows, se puede usar `py app.py`.
 
 Al abrir el programa aparece una ventana de acceso creada en `login.py`. En el primer uso, escribe un usuario y una contraseña de al menos ocho caracteres y pulsa **Crear cuenta**. Se abre el panel principal. En los siguientes usos, introduce esos mismos datos y pulsa **Entrar** o presiona Enter desde el campo de contraseña.
 
-Se admite una sola cuenta local, guardada en `data/cuenta.json` con salt aleatorio y hash PBKDF2-HMAC-SHA256, no con la contraseña en texto plano. El archivo está excluido de Git. No se requieren paquetes externos. No hay recuperación de contraseña ni gestión de múltiples usuarios.
+Se admite una sola cuenta local, guardada en `data/cuenta.json` con salt aleatorio y hash PBKDF2-HMAC-SHA256, no con la contraseña en texto plano. El archivo está excluido de Git. El modo simulado no requiere paquetes externos; el modo cámara requiere `opencv-python`. No hay recuperación de contraseña ni gestión de múltiples usuarios.
 
 Este acceso es básico para la demostración: no protege el CSV frente a personas con acceso al equipo ni sustituye los permisos del sistema operativo. Los manuales Word generados antes de este cambio todavía no incluyen el login.
 
 ## Cómo hacer la demostración
 
-1. Selecciona **Conducción normal** y observa el estado `NORMAL`.
-2. Selecciona **Cansancio leve** y observa `PRECAUCIÓN`.
-3. Selecciona **Somnolencia alta** y observa `ALERTA ALTA` y una señal sonora del sistema (si está disponible).
-4. Selecciona **Rostro no visible** y observa `SIN ROSTRO`, que significa que la evaluación no es posible; **no** es una detección de somnolencia.
-5. También puedes ajustar los controles manualmente o presionar **Iniciar demostración automática**.
-6. Usa **Registrar lectura en CSV** para guardar un ejemplo y presentar el historial.
-7. Con el estado en `PRECAUCIÓN` o `ALERTA ALTA`, abre **Plan de acción (búsqueda IA)** para ver la secuencia de acciones sugeridas calculada con BFS, DFS, UCS, Greedy o A*, comparar los cinco algoritmos y probar la calibración de umbrales con Hill Climbing y algoritmo genético.
+1. Desde **Cámara de la laptop**, prueba la captura local. La cámara genera señales compatibles con `core.py`.
+2. Con el estado en `PRECAUCIÓN` o `ALERTA ALTA`, abre **Plan de acción (búsqueda IA)** para ver la secuencia de acciones sugeridas calculada con BFS, DFS, UCS, Greedy o A*.
+3. Para probar escenarios sintéticos, abre **Modo simulación** en la barra lateral.
+4. En ese apartado puedes seleccionar `Conducción normal`, `Cansancio leve`, `Somnolencia alta` o `Rostro no visible`.
+5. Desde **Modo simulación** también puedes iniciar la demostración automática y registrar lecturas simuladas.
 
 ## Búsqueda en IA (busqueda.py)
 
@@ -61,6 +61,7 @@ DriveGuardAI_Demo/
 ├── login.py            # Acceso local con cuenta y contraseña
 ├── core.py             # Datos, reglas de evaluación y registro CSV
 ├── busqueda.py         # BFS, DFS, UCS, Greedy, A*, Hill Climbing y genético
+├── camera.py           # Captura local y señales básicas con OpenCV
 ├── busqueda_ui.py      # Ventana "Plan de acción" con los algoritmos
 ├── graficas.py         # Ventana de gráficas matplotlib sobre eventos.csv
 ├── requirements.txt    # Sin dependencias externas en el modo simulado
@@ -93,8 +94,8 @@ El archivo `data/eventos.csv` se crea automáticamente cuando cambia el estado a
 
 Estos valores fueron elegidos para facilitar la demostración y no deben describirse como umbrales médicos ni como resultado de entrenamiento o validación.
 
-## Próxima etapa: cámara real
+## Alcance de la cámara local
 
-Implementar adquisición con OpenCV y detección de landmarks faciales con MediaPipe Face Landmarker, calibración por persona, manejo de iluminación y oclusiones, pruebas reproducibles, aviso de privacidad y tratamiento de pérdida de cámara. La tecnología permite extraer señales faciales, **no** identifica la somnolencia de forma infalible.
+El archivo `camera.py` usa MediaPipe Face Mesh para obtener landmarks de ojos y boca, calcular EAR/MAR, contar parpadeos y bostezos, y estimar la inclinación. OpenCV y Haar quedan como respaldo. Esta etapa no sustituye calibración por persona, manejo de iluminación y oclusiones, pruebas reproducibles ni aviso de privacidad. La tecnología permite extraer señales, **no** identifica la somnolencia de forma infalible.
 
 Referencia: https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker/python

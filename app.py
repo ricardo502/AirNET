@@ -94,6 +94,9 @@ class DemoApp:
         menu.add_cascade(label='Demostración', menu=demostracion)
 
         herramientas = tk.Menu(menu, tearoff=0)
+        herramientas.add_command(label='Cámara de la laptop',
+                                 command=self.open_camera)
+        herramientas.add_separator()
         herramientas.add_command(label='Plan de acción (búsqueda IA)',
                                  command=self.open_plan)
         herramientas.add_command(label='Gráficas de eventos',
@@ -107,8 +110,9 @@ class DemoApp:
     def about(self):
         messagebox.showinfo('Acerca de DriveGuard AI',
                             'DriveGuard AI · Prototipo educativo\n\n'
-                            'Demostración con datos SIMULADOS: no usa cámara\n'
-                            'ni un modelo de IA entrenado, y los umbrales no\n'
+                            'La simulación usa datos sintéticos; la cámara\n'
+                            'opcional usa detección básica con OpenCV. No hay\n'
+                            'un modelo de IA entrenado y los umbrales no\n'
                             'están validados para uso en carretera.\n\n'
                             'Incluye un plan de acción calculado con\n'
                             'algoritmos de búsqueda (BFS, DFS, UCS,\n'
@@ -143,7 +147,9 @@ class DemoApp:
 
         tk.Label(sidebar, text='HERRAMIENTAS', fg='#AFC4E2', bg=SIDEBAR,
                  font=('Segoe UI', 8, 'bold')).pack(anchor='w', padx=20, pady=(12, 0))
-        for texto, comando in (('Plan de acción (búsqueda IA)', self.open_plan),
+        for texto, comando in (('Modo simulación', self.open_simulation_mode),
+                               ('Plan de acción (búsqueda IA)', self.open_plan),
+                               ('Cámara de la laptop', self.open_camera),
                                ('Gráficas de eventos', self.open_charts),
                                ('Exportar datos CSV', self.export_csv)):
             tk.Button(sidebar, text=texto, anchor='w', command=comando,
@@ -210,7 +216,7 @@ class DemoApp:
         top = tk.Frame(page, bg=BG)
         top.pack(fill='x', pady=(0, 10))
         self.label(top, 'Monitoreo del conductor', 18, TEXT, True).pack(side='left')
-        self.label(top, 'Solo datos simulados · Uso académico',
+        self.label(top, 'Simulación o cámara local · Uso académico',
                    9, MUTED).pack(side='right')
 
         content = tk.Frame(page, bg=BG)
@@ -244,38 +250,23 @@ class DemoApp:
 
         metrics = self.panel(left, fill='x', pady=(0, 9))
         self.label(metrics, 'DATOS DE ENTRADA  ·  AJUSTABLES', 12, TEXT, True).pack(anchor='w', pady=(0, 3))
-        self.scale(metrics, 'Ojos cerrados (segundos)', self.eye, 0, 4, 0.1)
-        self.scale(metrics, 'Parpadeos por minuto', self.blinks, 0, 45, 1)
-        self.scale(metrics, 'Bostezos por minuto', self.yawns, 0, 7, 1)
-        self.scale(metrics, 'Inclinación de cabeza (grados)', self.tilt, 0, 50, 1)
-        tk.Checkbutton(metrics, text='Rostro visible', variable=self.visible,
-                       bg=SURFACE, fg=TEXT, selectcolor='white', activebackground=SURFACE,
-                       activeforeground=TEXT, font=('Segoe UI', 11),
-                       command=self.assess).pack(anchor='w', pady=(8, 0))
+        metrics.pack_forget()
 
         notes = self.panel(left, fill='both', expand=True)
         self.label(notes, 'NOTAS DE DEMOSTRACIÓN', 11, TEXT, True).pack(anchor='w')
         explanation = ('El sistema calcula un nivel de riesgo con reglas ilustrativas. '
-                       'No analiza video ni utiliza una IA entrenada en esta versión. '
+                       'La simulación usa datos sintéticos; la cámara local usa '
+                       'OpenCV para señales básicas, no una IA entrenada. '
                        'Los valores y umbrales no están validados para uso en carretera.\n\n'
                        'El Plan de acción usa algoritmos de búsqueda (BFS, DFS, UCS, '
                        'Greedy y A*) sobre un grafo de acciones correctivas.')
         self.label(notes, explanation, 10, MUTED, wraplength=560, justify='left').pack(anchor='w', pady=(10, 0))
 
         controls = self.panel(right, fill='x', pady=(0, 9))
-        self.label(controls, 'ESCENARIO', 12, TEXT, True).pack(anchor='w')
-        style = ttk.Style()
-        if 'clam' in style.theme_names():
-            style.theme_use('clam')
-        style.configure('Drive.TCombobox', fieldbackground='white', padding=7)
-        combo = ttk.Combobox(controls, textvariable=self.scenario, values=list(SCENARIOS),
-                             state='readonly', style='Drive.TCombobox')
-        combo.pack(fill='x', pady=(10, 10))
-        combo.bind('<<ComboboxSelected>>', lambda _event: self.apply_scenario(True))
-        self.button(controls, 'Evaluar lectura actual', self.assess, '#1D6484')
-        self.button(controls, 'Iniciar demostración automática', self.start, '#1E7A46')
-        self.button(controls, 'Pausar demostración', self.stop, '#A33A4C')
-        self.button(controls, 'Registrar lectura en CSV', self.register, '#41628F')
+        self.label(controls, 'MODO PRINCIPAL: CÁMARA LOCAL', 12, TEXT, True).pack(anchor='w')
+        self.label(controls, 'La simulación está disponible en el botón «Modo simulación».',
+                   10, MUTED, wraplength=300, justify='left').pack(anchor='w', pady=(8, 10))
+        self.button(controls, 'Cámara de la laptop', self.open_camera, '#9A5B20')
         self.button(controls, 'Plan de acción (búsqueda IA)', self.open_plan, '#5B4A8A')
         self.button(controls, 'Gráficas de eventos', self.open_charts, '#4A6B8A')
         self.button(controls, 'Ver ubicación de registros', self.show_path, '#41628F')
@@ -359,8 +350,9 @@ class DemoApp:
         texto.insert('1.0',
             'QUÉ ES ESTE PROGRAMA\n'
             '-------------------\n'
-            'DriveGuard AI es un prototipo educativo que SIMULA señales de cansancio '
-            'del conductor. No usa cámara ni un modelo de IA entrenado.\n\n'
+            'DriveGuard AI es un prototipo educativo con dos modos: simulación '
+            'de señales y cámara local con detección básica mediante OpenCV. '
+            'No usa un modelo de IA entrenado.\n\n'
             'ESTADOS\n'
             '-------\n'
             'NORMAL (verde): sin señales destacadas en los datos simulados.\n'
@@ -454,6 +446,76 @@ class DemoApp:
     def open_plan(self):
         from busqueda_ui import abrir_plan
         abrir_plan(self.root, self.last_level)
+
+    def open_camera(self):
+        """Abre la captura real sin eliminar la demostración simulada."""
+        try:
+            from camera import abrir_camara
+            abrir_camara(self.root, on_assessment=self.receive_camera_assessment)
+        except ModuleNotFoundError as error:
+            messagebox.showerror(
+                'Dependencia faltante',
+                'Para usar la cámara instala OpenCV con:\n\n'
+                'python -m pip install opencv-python\n\n'
+                f'Detalle: {error}',
+                parent=self.root,
+            )
+
+    def open_simulation_mode(self):
+        """Abre los controles didácticos sin ocupar la pantalla principal."""
+        ventana = tk.Toplevel(self.root)
+        ventana.title('DriveGuard AI | Modo simulación')
+        ventana.geometry('460x390')
+        ventana.configure(bg=BG)
+        ventana.transient(self.root)
+
+        panel = self.panel(ventana, fill='both', expand=True, padx=18, pady=18)
+        self.label(panel, 'MODO SIMULACIÓN', 16, TEXT, True).pack(anchor='w')
+        self.label(panel,
+                   'Usa escenarios sintéticos para probar las reglas y los algoritmos de búsqueda.',
+                   10, MUTED, wraplength=390, justify='left').pack(anchor='w', pady=(8, 15))
+
+        style = ttk.Style()
+        if 'clam' in style.theme_names():
+            style.theme_use('clam')
+        style.configure('Drive.TCombobox', fieldbackground='white', padding=7)
+        tk.Label(panel, text='Escenario:', bg=SURFACE,
+                 fg=TEXT, font=('Segoe UI', 10, 'bold')).pack(anchor='w')
+        combo = ttk.Combobox(panel, textvariable=self.scenario,
+                             values=list(SCENARIOS), state='readonly',
+                             style='Drive.TCombobox')
+        combo.pack(fill='x', pady=(6, 12))
+        combo.bind('<<ComboboxSelected>>', lambda _event: self.apply_scenario(True))
+
+        self.button(panel, 'Evaluar escenario', self.assess, '#1D6484')
+        self.button(panel, 'Iniciar demostración automática', self.start, '#1E7A46')
+        self.button(panel, 'Pausar demostración', self.stop, '#A33A4C')
+        self.button(panel, 'Registrar lectura simulada', self.register, '#41628F')
+        tk.Label(panel, textvariable=self.sim_state, fg=ACCENT, bg=SURFACE,
+                 font=('Segoe UI', 10, 'bold')).pack(anchor='w', pady=(12, 0))
+
+    def receive_camera_assessment(self, signals, assessment):
+        """Sincroniza la última lectura de cámara con el panel y el planificador."""
+        previous = self.last_level
+        self.last_level = assessment.level
+        self.loading = True
+        self.eye.set(signals.eye_closed_seconds)
+        self.blinks.set(signals.blinks_per_minute)
+        self.yawns.set(signals.yawns_per_minute)
+        self.tilt.set(signals.head_tilt_degrees)
+        self.visible.set(signals.face_visible)
+        self.loading = False
+        self.status.set(assessment.level)
+        self.message.set(assessment.message)
+        self.reason.set('Cámara: ' + (', '.join(assessment.reasons)
+                                      if assessment.reasons else 'ninguna destacada'))
+        self.state_label.configure(fg=COLORS[assessment.level])
+        self.sim_state.set('CÁMARA LOCAL ACTIVA')
+        if assessment.level != previous:
+            self.add_history('CÁMARA: ' + assessment.level)
+            if assessment.level in ('PRECAUCIÓN', 'ALERTA ALTA', 'SIN ROSTRO'):
+                save_event(EVENTS, 'Cámara de la laptop', signals, assessment,
+                           origin='CAMARA')
 
     def open_charts(self):
         from graficas import abrir_graficas
